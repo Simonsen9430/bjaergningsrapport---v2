@@ -1,1 +1,50 @@
-<!-- adminpanel til brugerstyring -->
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin – Brugerstyring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+    <div class="container">
+        <h1 class="mb-4">🛠️ Brugerstyring</h1>
+        <a href="/" class="btn btn-secondary mb-4">⬅️ Tilbage</a>
+        <h3>Eksisterende brugere</h3>
+        <table class="table table-striped">
+            <thead><tr><th>Brugernavn</th><th>Rolle</th><th>Handling</th></tr></thead>
+            <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>{{ user[1] }}</td>
+                    <td>{% if user[2] %}Administrator{% else %}Bruger{% endif %}</td>
+                    <td>
+                        {% if not user[2] %}
+                        <form method="post" style="display:inline-block;">
+                            <input type="hidden" name="delete_user" value="{{ user[0] }}">
+                            <button type="submit" class="btn btn-sm btn-danger">🗑 Slet</button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted">Kan ikke slettes</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 class="mt-5">➕ Tilføj ny bruger</h3>
+        <form method="post" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="new_username" class="form-control" placeholder="Brugernavn" required>
+            </div>
+            <div class="col-md-4">
+                <input type="password" name="new_password" class="form-control" placeholder="Adgangskode" required>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" name="add_user" class="btn btn-primary w-100">Opret bruger</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
