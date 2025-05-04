@@ -2,31 +2,32 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>📝 Rapport</h2>
-    <div class="d-flex justify-content-between mb-3">
-        <a href="{{ url_for('rapporter') }}" class="btn btn-secondary">⬅️ Tilbage til oversigt</a>
+    <h2 class="mb-3">📝 Rapport</h2>
+
+    <div class="d-flex justify-content-between mb-4 flex-column flex-md-row">
+        <a href="{{ url_for('rapporter') }}" class="btn btn-secondary mb-2 mb-md-0">⬅️ Tilbage til oversigt</a>
         <a href="{{ url_for('download_pdf', report_id=report_id) }}" class="btn btn-danger">📄 Download som PDF</a>
     </div>
 
-    <div class="mb-4">
-        <p><strong>Sted:</strong> {{ report[1] }}</p>
-        <p><strong>Opgave:</strong> {{ report[2] }}</p>
-        <p><strong>Dato:</strong> {{ report[0][:16].replace('T', ' ') }}</p>
+    <div class="card p-3 mb-4">
+        <h5 class="card-title">📍 Sted: {{ report[1] }}</h5>
+        <p class="card-text">📝 Opgave: {{ report[2] }}</p>
+        <p class="card-text">🕒 Dato: {{ report[0][:16].replace('T', ' ') }}</p>
     </div>
 
     <h4>📌 Hændelsesforløb</h4>
     {% for entry in entries %}
-    <div class="card mb-3">
-        <div class="card-body">
-            <p><strong>{{ entry[1] }}</strong> – {{ entry[2] }}</p>
-            {% if entry[3] %}
-                <img src="{{ url_for('static', filename='uploads/' ~ entry[3]) }}" class="img-fluid mt-2" style="max-width: 300px;">
-            {% endif %}
-            <form method="post" action="{{ url_for('slet_haendelse', report_id=report_id, entry_id=entry[0]) }}" class="mt-2" onsubmit="return confirm('Er du sikker på, at du vil slette denne hændelse?')">
-                <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ Slet hændelse</button>
-            </form>
+        <div class="card mb-3">
+            <div class="card-body">
+                <strong>{{ entry[1] }}</strong> – {{ entry[2] }}
+                {% if entry[3] %}
+                    <br><img src="{{ url_for('static', filename='uploads/' + entry[3]) }}" class="img-fluid mt-2" style="max-width:300px;">
+                {% endif %}
+                <form method="post" action="{{ url_for('slet_haendelse', report_id=report_id, entry_id=entry[0]) }}" class="mt-2" onsubmit="return confirm('Er du sikker på, at du vil slette denne hændelse?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ Slet</button>
+                </form>
+            </div>
         </div>
-    </div>
     {% endfor %}
 </div>
 {% endblock %}
