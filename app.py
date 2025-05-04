@@ -5,17 +5,15 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from io import BytesIO
 from fpdf import FPDF
-import smtplib
-from email.message import EmailMessage
-
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+from PIL import Image
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'hemmelig-nøgle'
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.permanent_session_lifetime = timedelta(minutes=60)
 DATABASE = os.path.join(os.path.dirname(__file__), 'reports.db')
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 
 def init_db():
@@ -24,11 +22,6 @@ def init_db():
     cur.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT, is_admin INTEGER DEFAULT 0)")
     cur.execute("CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY, timestamp TEXT, location TEXT, subject TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY, report_id INTEGER, time TEXT, description TEXT, image TEXT, FOREIGN KEY(report_id) REFERENCES reports(id))")
-    cur.execute("SELECT COUNT(*) FROM users")
-    if cur.fetchone()[0] == 0:
-        cur.execute("INSERT INTO users (username, password, is_admin) VALUES ('admin', 'admin123', 1)")
-        for i in range(1, 7):
-            cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (f'user{i}', 'test123'))
     conn.commit()
     conn.close()
 
@@ -37,15 +30,11 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
+        session.permanent = True
         username = request.form['username']
         password = request.form['password']
         conn = sqlite3.connect(DATABASE)
@@ -83,10 +72,6 @@ def admin():
         elif 'delete_user' in request.form:
             user_id = request.form['delete_user']
             cur.execute("DELETE FROM users WHERE id=? AND is_admin=0", (user_id,))
-        elif 'change_password' in request.form:
-            user_id = request.form['user_id']
-            new_pass = request.form['new_password']
-            cur.execute("UPDATE users SET password=? WHERE id=?", (new_pass, user_id))
     cur.execute("SELECT id, username, is_admin FROM users")
     users = cur.fetchall()
     conn.commit()
@@ -98,12 +83,10 @@ def admin():
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-
     if request.method == 'POST':
         location = request.form['location']
         subject = request.form['subject']
         timestamp = datetime.now().isoformat()
-
         conn = sqlite3.connect(DATABASE)
         cur = conn.cursor()
         cur.execute("INSERT INTO reports(timestamp, location, subject) VALUES (?, ?, ?)", (timestamp, location, subject))
@@ -118,14 +101,13 @@ def index():
             if f and allowed_file(f.filename):
                 filename = secure_filename(f.filename)
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
                 f.save(filepath)
             cur.execute("INSERT INTO entries(report_id, time, description, image) VALUES (?, ?, ?, ?)", (report_id, t, d, filename))
 
         conn.commit()
         conn.close()
         return redirect(url_for('tak'))
-
     init_db()
     return render_template('index.html')
 
@@ -163,28 +145,15 @@ def vis_rapport(report_id):
     return render_template('rapport.html', report=report, entries=entries, report_id=report_id)
 
 
-@app.route('/rapport/<int:report_id>/slet/<int:entry_id>', methods=['POST'])
-def slet_haendelse(report_id, entry_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    conn = sqlite3.connect(DATABASE)
-    cur = conn.cursor()
-    cur.execute("DELETE FROM entries WHERE id=? AND report_id=?", (entry_id, report_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('vis_rapport', report_id=report_id))
-
-
 @app.route('/rapport/<int:report_id>/pdf')
 def download_pdf(report_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
     cur.execute("SELECT timestamp, location, subject FROM reports WHERE id=?", (report_id,))
     report = cur.fetchone()
-    cur.execute("SELECT time, description FROM entries WHERE report_id=?", (report_id,))
+    cur.execute("SELECT time, description, image FROM entries WHERE report_id=?", (report_id,))
     entries = cur.fetchall()
     conn.close()
 
@@ -200,12 +169,25 @@ def download_pdf(report_id):
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(200, 10, txt="Hændelsesforløb:", ln=True)
     pdf.set_font("Arial", size=11)
-    for time, desc in entries:
+
+    for time, desc, image in entries:
         pdf.multi_cell(0, 8, txt=f"{time} - {desc}", align='L')
         pdf.ln(1)
+        if image:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], image)
+            if os.path.exists(image_path):
+                try:
+                    img = Image.open(image_path)
+                    img = img.convert("RGB")
+                    temp_path = f"temp_{image}"
+                    img.save(temp_path)
+                    pdf.image(temp_path, w=100)
+                    os.remove(temp_path)
+                except Exception as e:
+                    print("Fejl ved indsættelse af billede:", e)
 
     buffer = BytesIO()
-    buffer.write(pdf.output(dest='S').encode('latin1'))
+    pdf.output(buffer, 'F')
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
 
