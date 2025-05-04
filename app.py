@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, session, flash
 import os
 import sqlite3
 from werkzeug.utils import secure_filename
@@ -8,19 +8,15 @@ from fpdf import FPDF
 import smtplib
 from email.message import EmailMessage
 
-# 📁 Upload-mappe og tilladte filtyper
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-# 🚀 Flask setup
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'hemmelig-nøgle'
-app.permanent_session_lifetime = timedelta(minutes=60)  # ⏰ Automatisk log ud efter inaktivitet
+app.permanent_session_lifetime = timedelta(minutes=60)
 DATABASE = os.path.join(os.path.dirname(__file__), 'reports.db')
 
-
-# 🔧 Opret database
 def init_db():
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
@@ -35,13 +31,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-
-# 🖼️ Tilladte filtyper
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-# 🔐 Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -63,15 +55,11 @@ def login():
             error = "Forkert brugernavn eller adgangskode."
     return render_template('login.html', error=error)
 
-
-# 🔓 Logout
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-
-# 👤 Adminpanel
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if not session.get('logged_in') or not session.get('is_admin'):
@@ -96,8 +84,6 @@ def admin():
     conn.close()
     return render_template('admin.html', users=users)
 
-
-# 📝 Rapportforside
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if not session.get('logged_in'):
@@ -125,15 +111,12 @@ def index():
     init_db()
     return render_template('index.html')
 
-
 @app.route('/tak')
 def tak():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     return render_template('tak.html')
 
-
-# 📋 Rapportoversigt
 @app.route('/rapporter')
 def rapporter():
     if not session.get('logged_in'):
@@ -145,9 +128,7 @@ def rapporter():
     conn.close()
     return render_template('rapporter.html', reports=reports)
 
-
-# 🔍 Rapportvisning
-@app.route('/rapport/<int:report_id>')
+@app.route('/rapport/<int:report_id>', methods=['GET', 'POST'])
 def vis_rapport(report_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
@@ -158,10 +139,15 @@ def vis_rapport(report_id):
     cur.execute("SELECT time, description, image FROM entries WHERE report_id=?", (report_id,))
     entries = cur.fetchall()
     conn.close()
+    if request.method == 'POST':
+        modtager = request.form['email']
+        pdf = generer_pdf(report, entries)
+        if send_email_pdf(modtager, pdf):
+            flash("PDF sendt til " + modtager, "success")
+        else:
+            flash("Der opstod en fejl ved afsendelse.", "danger")
     return render_template('rapport.html', report=report, entries=entries, report_id=report_id)
 
-
-# 📄 Download PDF
 @app.route('/rapport/<int:report_id>/pdf')
 def download_pdf(report_id):
     if not session.get('logged_in'):
@@ -173,6 +159,10 @@ def download_pdf(report_id):
     cur.execute("SELECT time, description FROM entries WHERE report_id=?", (report_id,))
     entries = cur.fetchall()
     conn.close()
+    pdf = generer_pdf(report, entries)
+    return send_file(pdf, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
+
+def generer_pdf(report, entries):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
@@ -188,13 +178,31 @@ def download_pdf(report_id):
     for time, desc in entries:
         pdf.multi_cell(0, 8, txt=f"{time} - {desc}", align='L')
         pdf.ln(1)
-    buffer = BytesIO()
-    pdf.output(buffer)
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    buffer = BytesIO(pdf_bytes)
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
+    return buffer
 
+def send_email_pdf(modtager, pdf_data):
+    try:
+        sender = os.environ.get('EMAIL_SENDER')
+        password = os.environ.get('EMAIL_PASSWORD')
+        if not sender or not password:
+            return False
+        msg = EmailMessage()
+        msg['Subject'] = "Bjærgningsrapport PDF"
+        msg['From'] = sender
+        msg['To'] = modtager
+        msg.set_content("Vedhæftet finder du PDF-rapporten.")
+        msg.add_attachment(pdf_data.read(), maintype='application', subtype='pdf', filename='rapport.pdf')
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(sender, password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        print("Fejl ved e-mail:", e)
+        return False
 
-# 🚀 Start app
 if __name__ == '__main__':
     init_db()
     port = int(os.environ.get("PORT", 5000))
