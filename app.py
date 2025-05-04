@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, send_file,
 import os
 import sqlite3
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from fpdf import FPDF
 
@@ -12,6 +12,8 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'hemmelig-nøgle'
+app.permanent_session_lifetime = timedelta(minutes=60)  # Auto log ud efter 60 min
+
 DATABASE = os.path.join(os.path.dirname(__file__), 'reports.db')
 
 def init_db():
@@ -21,13 +23,11 @@ def init_db():
     cur.execute("CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY, timestamp TEXT, location TEXT, subject TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY, report_id INTEGER, time TEXT, description TEXT, image TEXT, FOREIGN KEY(report_id) REFERENCES reports(id))")
     
-    # Opret admin og 6 brugere hvis de ikke findes
     cur.execute("SELECT COUNT(*) FROM users")
     if cur.fetchone()[0] == 0:
         cur.execute("INSERT INTO users (username, password, is_admin) VALUES ('admin', 'admin123', 1)")
         for i in range(1, 7):
             cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (f'user{i}', 'test123'))
-
     conn.commit()
     conn.close()
 
@@ -46,6 +46,7 @@ def login():
         user = cur.fetchone()
         conn.close()
         if user:
+            session.permanent = True
             session['logged_in'] = True
             session['user_id'] = user[0]
             session['is_admin'] = bool(user[1])
