@@ -2,36 +2,14 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">📁 Tidligere Rapporteringer</h1>
-
+    <h2>📁 Tidligere rapporter</h2>
     {% if reports %}
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col">📅 Dato</th>
-                        <th scope="col">📍 Sted</th>
-                        <th scope="col">📝 Beskrivelse</th>
-                        <th scope="col">🔍</th>
-                        <th scope="col">⬇️ PDF</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for id, timestamp, location, subject in reports %}
-                    <tr>
-                        <td>{{ timestamp[:16].replace('T', ' ') }}</td>
-                        <td>{{ location }}</td>
-                        <td>{{ subject }}</td>
-                        <td>
-                            <a href="{{ url_for('vis_rapport', report_id=id) }}" class="btn btn-primary btn-sm">Se</a>
-                        </td>
-                        <td>
-                            <a href="{{ url_for('download_pdf', report_id=id) }}" class="btn btn-danger btn-sm">PDF</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="list-group mt-3">
+            {% for report in reports %}
+                <a href="{{ url_for('vis_rapport', report_id=report[0]) }}" class="list-group-item list-group-item-action">
+                    <strong>{{ report[2] }}</strong> – {{ report[1][:16].replace('T', ' ') }} – {{ report[3] }}
+                </a>
+            {% endfor %}
         </div>
     {% else %}
         <p>Ingen rapporter oprettet endnu.</p>
