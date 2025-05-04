@@ -32,7 +32,7 @@
                 <tr>
                     <th>Brugernavn</th>
                     <th>Rolle</th>
-                    <th>Handling</th>
+                    <th>Handlinger</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,14 +41,20 @@
                         <td>{{ user[1] }}</td>
                         <td>{% if user[2] %}Administrator{% else %}Bruger{% endif %}</td>
                         <td>
-                            {% if not user[2] %}
-                                <form method="post" style="display:inline;">
+                            <div class="d-flex flex-column flex-md-row gap-2">
+                                {% if not user[2] %}
+                                <form method="post" class="d-inline">
                                     <input type="hidden" name="delete_user" value="{{ user[0] }}">
-                                    <button type="submit" class="btn btn-sm btn-danger">🗑 Slet</button>
+                                    <button type="submit" class="btn btn-danger btn-sm">🗑 Slet</button>
                                 </form>
-                            {% else %}
-                                <span class="text-muted">Kan ikke slettes</span>
-                            {% endif %}
+                                {% endif %}
+
+                                <form method="post" class="d-flex flex-row gap-2">
+                                    <input type="hidden" name="change_password_user" value="{{ user[0] }}">
+                                    <input type="password" name="new_password" class="form-control form-control-sm" placeholder="Ny adgangskode" required>
+                                    <button type="submit" class="btn btn-warning btn-sm">🔑 Skift kode</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
