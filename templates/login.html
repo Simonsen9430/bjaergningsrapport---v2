@@ -1,47 +1,29 @@
-<!DOCTYPE html>
-<html lang="da">
-<head>
-    <meta charset="UTF-8">
-    <title>Login – Bjærgningsrapport</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f2f2f2;
-        }
-        .login-box {
-            max-width: 400px;
-            margin: 80px auto;
-            padding: 2rem;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        }
-        .logo {
-            max-width: 200px;
-            display: block;
-            margin: 0 auto 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-box text-center">
-        <img src="{{ url_for('static', filename='img/soslogo.png') }}" alt="SOS Dansk Autohjælp" class="logo">
-        <h2 class="mb-3">Log ind</h2>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+        <h2 class="text-center mb-4">🔐 Login</h2>
+
         {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
         {% endif %}
+
         <form method="post">
-            <div class="form-floating mb-3">
-                <input type="text" name="username" class="form-control" id="username" placeholder="Brugernavn" required>
-                <label for="username">Brugernavn</label>
+            <div class="mb-3">
+                <label for="username" class="form-label">Brugernavn</label>
+                <input type="text" class="form-control" id="username" name="username" required>
             </div>
-            <div class="form-floating mb-3">
-                <input type="password" name="password" class="form-control" id="password" placeholder="Adgangskode" required>
-                <label for="password">Adgangskode</label>
+            <div class="mb-3">
+                <label for="password" class="form-label">Adgangskode</label>
+                <input type="password" class="form-control" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn btn-primary w-100">🔓 Log ind</button>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Log ind</button>
+            </div>
         </form>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
