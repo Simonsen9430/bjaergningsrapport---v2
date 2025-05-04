@@ -143,6 +143,17 @@ def vis_rapport(report_id):
         modtager = request.form['email']
         pdf = generer_pdf(report, entries)
         if send_email_pdf(modtager, pdf):
+            # Slet billeder og referencer
+            for _, _, image in entries:
+                if image:
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], image)
+                    if os.path.exists(path):
+                        os.remove(path)
+            conn = sqlite3.connect(DATABASE)
+            cur = conn.cursor()
+            cur.execute("UPDATE entries SET image=NULL WHERE report_id=?", (report_id,))
+            conn.commit()
+            conn.close()
             flash("PDF sendt til " + modtager, "success")
         else:
             flash("Der opstod en fejl ved afsendelse.", "danger")
