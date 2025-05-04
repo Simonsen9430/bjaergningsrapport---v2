@@ -2,100 +2,88 @@
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <title>Ny Bjærgningsrapport</title>
+    <title>🚨 Bjærgningsrapport – Live Indtastning</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .entry-group { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 6px; background-color: #f9f9f9; }
+        .entry-group {
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .logo {
+            max-width: 200px;
+        }
     </style>
 </head>
-<body class="bg-light">
-
-    <!-- 🔝 Topmenu -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">🚨 SOS Rapport</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu" aria-controls="menu" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="menu">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="/">Ny rapport</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/rapporter">Tidligere rapporter</a></li>
-                    {% if session['is_admin'] %}
-                    <li class="nav-item"><a class="nav-link" href="/admin">Adminpanel</a></li>
-                    {% endif %}
-                </ul>
-                <span class="navbar-text me-2 text-white">
-                    🔓 <a href="/logout" class="text-white text-decoration-none">Log ud</a>
-                </span>
-            </div>
+<body class="bg-light p-3">
+    <div class="container">
+        <div class="text-center mb-4">
+            <img src="{{ url_for('static', filename='img/soslogo.png') }}" class="logo" alt="SOS Dansk Autohjælp">
         </div>
-    </nav>
-
-    <div class="container py-4">
         <h2 class="mb-4">📝 Opret ny bjærgningsrapport</h2>
-
-        <form method="POST" enctype="multipart/form-data">
-            <div class="mb-4">
-                <h4>1. Opgaveinformation</h4>
-                <label for="location" class="form-label">📍 Sted:</label>
-                <input type="text" class="form-control form-control-lg" name="location" id="location" required>
-
-                <label for="subject" class="form-label mt-3">📝 Beskrivelse af opgave:</label>
-                <input type="text" class="form-control form-control-lg" name="subject" id="subject" required>
+        <form method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="location" class="form-label">📍 Sted</label>
+                <input type="text" name="location" id="location" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="subject" class="form-label">📝 Beskrivelse af opgave</label>
+                <input type="text" name="subject" id="subject" class="form-control" required>
             </div>
 
-            <div class="mb-4">
-                <h4>2. Hændelsesforløb</h4>
-                <div id="entry-container">
-                    <div class="entry-group">
-                        <div class="row g-2">
-                            <div class="col-md-3">
-                                <input type="time" class="form-control" name="entry_time" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input type="text" class="form-control" name="entry_desc" placeholder="Beskrivelse" required>
-                            </div>
-                            <div class="col-md-3">
-                                <input type="file" class="form-control" name="entry_image">
-                            </div>
-                        </div>
+            <h4 class="mt-4">📌 Hændelsesforløb</h4>
+            <div id="entries">
+                <div class="entry-group">
+                    <div class="mb-2">
+                        <label>Tidspunkt</label>
+                        <input type="time" name="entry_time" class="form-control" required>
+                    </div>
+                    <div class="mb-2">
+                        <label>Beskrivelse</label>
+                        <textarea name="entry_desc" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label>Billede (valgfrit)</label>
+                        <input type="file" name="entry_image" accept="image/*" class="form-control">
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary mt-2" onclick="addEntry()">➕ Tilføj hændelse</button>
             </div>
+            <button type="button" class="btn btn-secondary mb-3" onclick="addEntry()">➕ Tilføj hændelse</button>
 
-            <button type="submit" class="btn btn-success btn-lg w-100">✅ Gem rapport</button>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-success">💾 Gem rapport</button>
+            </div>
         </form>
+
+        <div class="mt-4 text-center">
+            <a href="{{ url_for('rapporter') }}" class="btn btn-outline-primary">📚 Se tidligere rapporter</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger ms-2">🚪 Log ud</a>
+        </div>
     </div>
 
     <script>
         function addEntry() {
-            const container = document.getElementById('entry-container');
-            const entry = document.createElement('div');
-            entry.classList.add('entry-group');
-
-            entry.innerHTML = `
-                <div class="row g-2">
-                    <div class="col-md-3">
-                        <input type="time" class="form-control" name="entry_time" required>
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" name="entry_desc" placeholder="Beskrivelse" required>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="file" class="form-control" name="entry_image">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-center">
-                        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.entry-group').remove()">🗑</button>
-                    </div>
+            const container = document.getElementById('entries');
+            const group = document.createElement('div');
+            group.className = 'entry-group';
+            group.innerHTML = `
+                <div class="mb-2">
+                    <label>Tidspunkt</label>
+                    <input type="time" name="entry_time" class="form-control" required>
                 </div>
-            `;
-            container.appendChild(entry);
+                <div class="mb-2">
+                    <label>Beskrivelse</label>
+                    <textarea name="entry_desc" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="mb-2">
+                    <label>Billede (valgfrit)</label>
+                    <input type="file" name="entry_image" accept="image/*" class="form-control">
+                </div>`;
+            container.appendChild(group);
         }
     </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
