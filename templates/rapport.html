@@ -2,33 +2,37 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
         <h2>📝 Rapport</h2>
-        <div>
-            <a href="{{ url_for('rapporter') }}" class="btn btn-secondary me-2">⬅️ Tilbage</a>
-            <a href="{{ url_for('download_pdf', report_id=report_id) }}" class="btn btn-danger">📄 Download PDF</a>
+        <div class="mt-2 mt-md-0">
+            <a href="{{ url_for('rapporter') }}" class="btn btn-secondary btn-sm">⬅️ Tilbage</a>
+            <a href="{{ url_for('download_pdf', report_id=report_id) }}" class="btn btn-danger btn-sm">📄 Download PDF</a>
         </div>
     </div>
 
-    <div class="mb-4">
-        <p><strong>Sted:</strong> {{ report[1] }}</p>
-        <p><strong>Opgave:</strong> {{ report[2] }}</p>
-        <p><strong>Dato:</strong> {{ report[0][:16].replace('T', ' ') }}</p>
-    </div>
+    <hr>
+    <p><strong>Sted:</strong> {{ report[1] }}</p>
+    <p><strong>Opgave:</strong> {{ report[2] }}</p>
+    <p><strong>Dato:</strong> {{ report[0][:16].replace('T', ' ') }}</p>
 
-    <h4>📌 Hændelsesforløb</h4>
-    {% for entry in entries %}
+    <h5 class="mt-4">📌 Hændelsesforløb</h5>
+
+    {% if entries %}
+        {% for entry in entries %}
         <div class="card mb-3">
             <div class="card-body">
                 <p><strong>{{ entry[1] }}</strong> – {{ entry[2] }}</p>
                 {% if entry[3] %}
-                    <img src="{{ url_for('static', filename='uploads/' + entry[3]) }}" class="img-fluid mt-2" style="max-width: 300px;">
+                    <img src="{{ url_for('static', filename='uploads/' + entry[3]) }}" class="img-fluid rounded mt-2" style="max-width: 300px;">
                 {% endif %}
                 <form method="post" action="{{ url_for('slet_haendelse', report_id=report_id, entry_id=entry[0]) }}" class="mt-2" onsubmit="return confirm('Er du sikker på, at du vil slette denne hændelse?')">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ Slet</button>
+                    <button type="submit" class="btn btn-outline-danger btn-sm">🗑️ Slet</button>
                 </form>
             </div>
         </div>
-    {% endfor %}
+        {% endfor %}
+    {% else %}
+        <p class="text-muted">Ingen hændelser fundet.</p>
+    {% endif %}
 </div>
 {% endblock %}
