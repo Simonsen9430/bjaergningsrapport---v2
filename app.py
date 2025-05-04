@@ -191,12 +191,15 @@ def download_pdf(report_id):
         if image:
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], image)
             if os.path.exists(image_path):
-                pdf.image(image_path, w=100)
-        pdf.ln(1)
+                pdf.ln(1)
+                try:
+                    pdf.image(image_path, w=100)
+                except RuntimeError:
+                    pdf.cell(200, 10, txt="(Billedet kunne ikke indsættes)", ln=True)
+        pdf.ln(2)
 
-    buffer = BytesIO()
-    pdf.output(buffer)
-    buffer.seek(0)
+    pdf_data = pdf.output(dest='S').encode('latin1')
+    buffer = BytesIO(pdf_data)
     return send_file(buffer, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
 
 if __name__ == '__main__':
