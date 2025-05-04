@@ -156,7 +156,7 @@ def download_pdf(report_id):
     cur = conn.cursor()
     cur.execute("SELECT timestamp, location, subject FROM reports WHERE id=?", (report_id,))
     report = cur.fetchone()
-    cur.execute("SELECT time, description FROM entries WHERE report_id=?", (report_id,))
+    cur.execute("SELECT time, description, image FROM entries WHERE report_id=?", (report_id,))
     entries = cur.fetchall()
     conn.close()
     pdf = generer_pdf(report, entries)
@@ -175,9 +175,14 @@ def generer_pdf(report, entries):
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(200, 10, txt="Hændelsesforløb:", ln=True)
     pdf.set_font("Arial", size=11)
-    for time, desc in entries:
+    for time, desc, image in entries:
         pdf.multi_cell(0, 8, txt=f"{time} - {desc}", align='L')
-        pdf.ln(1)
+        if image:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], image)
+            if os.path.exists(image_path):
+                pdf.ln(2)
+                pdf.image(image_path, w=100)
+        pdf.ln(5)
     pdf_bytes = pdf.output(dest='S').encode('latin1')
     buffer = BytesIO(pdf_bytes)
     buffer.seek(0)
