@@ -2,21 +2,22 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">📂 Tidligere Bjærgningsrapporter</h2>
+    <h2>📄 Tidligere rapporter</h2>
+
     {% if reports %}
-        <div class="list-group">
+        <div class="list-group mt-3">
             {% for report in reports %}
-                <a href="{{ url_for('vis_rapport', report_id=report[0]) }}" class="list-group-item list-group-item-action">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">{{ report[2] }}</h5>
-                        <small>{{ report[1][:16].replace('T', ' ') }}</small>
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <strong>{{ report[2] }}</strong><br>
+                        {{ report[1][:16].replace('T', ' ') }} – {{ report[3] }}
                     </div>
-                    <p class="mb-1">{{ report[3] }}</p>
-                </a>
+                    <a href="{{ url_for('vis_rapport', report_id=report[0]) }}" class="btn btn-primary btn-sm mt-2 mt-md-0">🔍 Se rapport</a>
+                </div>
             {% endfor %}
         </div>
     {% else %}
-        <p>Der er ingen rapporter endnu.</p>
+        <p class="text-muted mt-3">Der er endnu ingen rapporter oprettet.</p>
     {% endif %}
 </div>
 {% endblock %}
