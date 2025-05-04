@@ -2,23 +2,36 @@
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <title>Rapporter</title>
+    <title>Rapportoversigt</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="p-4 bg-light">
+<body class="bg-light p-4">
     <div class="container">
-        <h1 class="mb-4">📋 Tidligere rapporter</h1>
-        <a href="/" class="btn btn-primary mb-4">➕ Opret ny</a>
-        <table class="table table-bordered bg-white">
-            <thead><tr><th>ID</th><th>Tidspunkt</th><th>Sted</th><th>Opgave</th><th></th></tr></thead>
-            <tbody>
-                {% for r in reports %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📂 Tidligere rapporter</h2>
+            <a href="/logout" class="btn btn-outline-dark btn-sm">🔓 Log ud</a>
+        </div>
+
+        <a href="/" class="btn btn-secondary mb-4">⬅️ Ny rapport</a>
+
+        <table class="table table-bordered table-striped">
+            <thead class="table-light">
                 <tr>
-                    <td>{{ r[0] }}</td>
-                    <td>{{ r[1][:16].replace('T',' ') }}</td>
-                    <td>{{ r[2] }}</td>
-                    <td>{{ r[3] }}</td>
-                    <td><a href="/rapport/{{ r[0] }}" class="btn btn-sm btn-outline-primary">🔍</a></td>
+                    <th>Dato</th>
+                    <th>Sted</th>
+                    <th>Beskrivelse</th>
+                    <th>Vis</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td>{{ report[1][:16].replace('T', ' ') }}</td>
+                    <td>{{ report[2] }}</td>
+                    <td>{{ report[3] }}</td>
+                    <td><a href="/rapport/{{ report[0] }}" class="btn btn-primary btn-sm">📄 Åbn</a></td>
                 </tr>
                 {% endfor %}
             </tbody>

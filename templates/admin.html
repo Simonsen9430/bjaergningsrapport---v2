@@ -8,7 +8,10 @@
 </head>
 <body class="bg-light p-4">
     <div class="container">
-        <h1 class="mb-4">👤 Brugeradministration</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>👤 Brugeradministration</h1>
+            <a href="/logout" class="btn btn-outline-dark btn-sm">🔓 Log ud</a>
+        </div>
 
         <a href="/" class="btn btn-secondary mb-4">⬅️ Tilbage til rapport</a>
 
@@ -27,7 +30,7 @@
         </form>
 
         <h4>📋 Eksisterende brugere</h4>
-        <table class="table table-bordered table-striped table-hover">
+        <table class="table table-bordered table-striped">
             <thead class="table-light">
                 <tr>
                     <th>Brugernavn</th>
@@ -37,26 +40,25 @@
             </thead>
             <tbody>
                 {% for user in users %}
-                    <tr>
-                        <td>{{ user[1] }}</td>
-                        <td>{% if user[2] %}Administrator{% else %}Bruger{% endif %}</td>
-                        <td>
-                            <div class="d-flex flex-column flex-md-row gap-2">
-                                {% if not user[2] %}
-                                <form method="post" class="d-inline">
-                                    <input type="hidden" name="delete_user" value="{{ user[0] }}">
-                                    <button type="submit" class="btn btn-danger btn-sm">🗑 Slet</button>
-                                </form>
-                                {% endif %}
-
-                                <form method="post" class="d-flex flex-row gap-2">
-                                    <input type="hidden" name="change_password_user" value="{{ user[0] }}">
-                                    <input type="password" name="new_password" class="form-control form-control-sm" placeholder="Ny adgangskode" required>
-                                    <button type="submit" class="btn btn-warning btn-sm">🔑 Skift kode</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
+                <tr>
+                    <td>{{ user[1] }}</td>
+                    <td>{% if user[2] %}Administrator{% else %}Bruger{% endif %}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if not user[2] %}
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="delete_user" value="{{ user[0] }}">
+                                <button type="submit" class="btn btn-danger btn-sm">🗑 Slet</button>
+                            </form>
+                            {% endif %}
+                            <form method="post" class="d-flex gap-2 flex-wrap">
+                                <input type="hidden" name="change_password_user" value="{{ user[0] }}">
+                                <input type="password" name="new_password" class="form-control form-control-sm" placeholder="Ny adgangskode" required>
+                                <button type="submit" class="btn btn-warning btn-sm">🔑 Skift kode</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
