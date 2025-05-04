@@ -1,11 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 import os
 import sqlite3
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from fpdf import FPDF
-from PIL import Image
+import smtplib
+from email.message import EmailMessage
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -13,10 +14,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'hemmelig-nøgle'
+app.permanent_session_lifetime = timedelta(minutes=60)
 DATABASE = os.path.join(os.path.dirname(__file__), 'reports.db')
 
-# Sørg for at upload-mappen eksisterer
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -33,6 +35,10 @@ def init_db():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -59,40 +65,56 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/')
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if not session.get('logged_in') or not session.get('is_admin'):
+        return redirect(url_for('login'))
+    conn = sqlite3.connect(DATABASE)
+    cur = conn.cursor()
+    if request.method == 'POST':
+        if 'add_user' in request.form:
+            username = request.form['new_username']
+            password = request.form['new_password']
+            cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+        elif 'delete_user' in request.form:
+            user_id = request.form['delete_user']
+            cur.execute("DELETE FROM users WHERE id=? AND is_admin=0", (user_id,))
+        elif 'change_password' in request.form:
+            user_id = request.form['user_id']
+            new_password = request.form['new_password']
+            cur.execute("UPDATE users SET password=? WHERE id=?", (new_password, user_id))
+    cur.execute("SELECT id, username, is_admin FROM users")
+    users = cur.fetchall()
+    conn.commit()
+    conn.close()
+    return render_template('admin.html', users=users)
+
+@app.route('/', methods=['GET', 'POST'])
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
+    if request.method == 'POST':
+        location = request.form['location']
+        subject = request.form['subject']
+        timestamp = datetime.now().isoformat()
+        conn = sqlite3.connect(DATABASE)
+        cur = conn.cursor()
+        cur.execute("INSERT INTO reports(timestamp, location, subject) VALUES (?, ?, ?)", (timestamp, location, subject))
+        report_id = cur.lastrowid
+        times = request.form.getlist('entry_time')
+        descs = request.form.getlist('entry_desc')
+        images = request.files.getlist('entry_image')
+        for t, d, f in zip(times, descs, images):
+            filename = ''
+            if f and allowed_file(f.filename):
+                filename = secure_filename(f.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                f.save(filepath)
+            cur.execute("INSERT INTO entries(report_id, time, description, image) VALUES (?, ?, ?, ?)", (report_id, t, d, filename))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('tak'))
     return render_template('index.html')
-
-@app.route('/', methods=['POST'])
-def submit_report():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-
-    location = request.form['location']
-    subject = request.form['subject']
-    timestamp = datetime.now().isoformat()
-
-    conn = sqlite3.connect(DATABASE)
-    cur = conn.cursor()
-    cur.execute("INSERT INTO reports(timestamp, location, subject) VALUES (?, ?, ?)", (timestamp, location, subject))
-    report_id = cur.lastrowid
-
-    times = request.form.getlist('entry_time')
-    descs = request.form.getlist('entry_desc')
-    images = request.files.getlist('entry_image')
-
-    for t, d, f in zip(times, descs, images):
-        filename = ''
-        if f and allowed_file(f.filename):
-            filename = secure_filename(f.filename)
-            f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        cur.execute("INSERT INTO entries(report_id, time, description, image) VALUES (?, ?, ?, ?)", (report_id, t, d, filename))
-
-    conn.commit()
-    conn.close()
-    return redirect(url_for('tak'))
 
 @app.route('/tak')
 def tak():
@@ -104,7 +126,6 @@ def tak():
 def rapporter():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
     cur.execute("SELECT id, timestamp, location, subject FROM reports ORDER BY timestamp DESC")
@@ -116,7 +137,6 @@ def rapporter():
 def vis_rapport(report_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
     cur.execute("SELECT timestamp, location, subject FROM reports WHERE id=?", (report_id,))
@@ -130,7 +150,6 @@ def vis_rapport(report_id):
 def download_pdf(report_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
     cur.execute("SELECT timestamp, location, subject FROM reports WHERE id=?", (report_id,))
@@ -138,7 +157,6 @@ def download_pdf(report_id):
     cur.execute("SELECT time, description, image FROM entries WHERE report_id=?", (report_id,))
     entries = cur.fetchall()
     conn.close()
-
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
@@ -148,32 +166,34 @@ def download_pdf(report_id):
     pdf.cell(200, 10, txt=f"Opgave: {report[2]}", ln=True)
     pdf.cell(200, 10, txt=f"Dato: {report[0][:16].replace('T', ' ')}", ln=True)
     pdf.ln(10)
-
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(200, 10, txt="Hændelsesforløb:", ln=True)
     pdf.set_font("Arial", size=11)
-
     for time, desc, image in entries:
         pdf.multi_cell(0, 8, txt=f"{time} - {desc}", align='L')
-        pdf.ln(1)
         if image:
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], image)
             if os.path.exists(image_path):
-                try:
-                    img = Image.open(image_path)
-                    width, height = img.size
-                    ratio = 100 / width
-                    pdf.image(image_path, w=100)
-                    pdf.ln(5)
-                except Exception as e:
-                    print("Billedfejl:", e)
+                pdf.ln(1)
+                pdf.image(image_path, w=100)
+        pdf.ln(2)
+    pdf_buffer = BytesIO()
+    pdf.output(pdf_buffer, 'F')
+    pdf_buffer.seek(0)
+    return send_file(pdf_buffer, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
 
-    buffer = BytesIO()
-    pdf.output(buffer, 'F')
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
+@app.route('/rapport/<int:report_id>/delete/<int:entry_id>', methods=['POST'])
+def slet_haendelse(report_id, entry_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    conn = sqlite3.connect(DATABASE)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM entries WHERE id=?", (entry_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('vis_rapport', report_id=report_id))
 
 if __name__ == '__main__':
     init_db()
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
