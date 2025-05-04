@@ -160,6 +160,19 @@ def download_pdf(report_id):
     entries = cur.fetchall()
     conn.close()
     pdf = generer_pdf(report, entries)
+
+    # Slet billeder og fjern referencer
+    for _, _, image in entries:
+        if image:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], image)
+            if os.path.exists(path):
+                os.remove(path)
+    conn = sqlite3.connect(DATABASE)
+    cur = conn.cursor()
+    cur.execute("UPDATE entries SET image=NULL WHERE report_id=?", (report_id,))
+    conn.commit()
+    conn.close()
+
     return send_file(pdf, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
 
 def generer_pdf(report, entries):
