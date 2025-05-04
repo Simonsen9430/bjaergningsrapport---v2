@@ -6,55 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-
-    <!-- 🔝 Topmenu -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">🚨 SOS Rapport</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu" aria-controls="menu" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="menu">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="/">Ny rapport</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/rapporter">Tidligere rapporter</a></li>
-                    {% if session['is_admin'] %}
-                    <li class="nav-item"><a class="nav-link" href="/admin">Adminpanel</a></li>
-                    {% endif %}
-                </ul>
-                <span class="navbar-text me-2 text-white">
-                    🔓 <a href="/logout" class="text-white text-decoration-none">Log ud</a>
-                </span>
+<body class="bg-light p-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>📂 Tidligere rapporter</h3>
+            <a href="{{ url_for('index') }}" class="btn btn-success">➕ Ny rapport</a>
+        </div>
+        {% for report in reports %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ report[2] }}</h5>
+                <p class="card-text">
+                    <strong>Sted:</strong> {{ report[2] }}<br>
+                    <strong>Tidspunkt:</strong> {{ report[1][:16].replace('T', ' ') }}
+                </p>
+                <a href="{{ url_for('vis_rapport', report_id=report[0]) }}" class="btn btn-primary">📄 Se rapport</a>
             </div>
         </div>
-    </nav>
-
-    <div class="container py-4">
-        <h2>📂 Tidligere rapporter</h2>
-
-        <table class="table table-bordered table-striped mt-3">
-            <thead class="table-light">
-                <tr>
-                    <th>Dato</th>
-                    <th>Sted</th>
-                    <th>Beskrivelse</th>
-                    <th>Vis</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for report in reports %}
-                <tr>
-                    <td>{{ report[1][:16].replace('T', ' ') }}</td>
-                    <td>{{ report[2] }}</td>
-                    <td>{{ report[3] }}</td>
-                    <td><a href="/rapport/{{ report[0] }}" class="btn btn-primary btn-sm">📄 Åbn</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% endfor %}
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
