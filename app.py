@@ -5,8 +5,6 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from io import BytesIO
 from fpdf import FPDF
-import smtplib
-from email.message import EmailMessage
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -15,7 +13,6 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'hemmelig-nøgle'
 DATABASE = os.path.join(os.path.dirname(__file__), 'reports.db')
-
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -30,14 +27,12 @@ def init_db():
         cur.execute("INSERT INTO users (username, password, is_admin) VALUES ('admin', 'admin123', 1)")
         for i in range(1, 7):
             cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (f'user{i}', 'test123'))
-    
+
     conn.commit()
     conn.close()
 
-
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -59,12 +54,10 @@ def login():
             error = "Forkert brugernavn eller adgangskode."
     return render_template('login.html', error=error)
 
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
-
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -82,13 +75,16 @@ def admin():
         elif 'delete_user' in request.form:
             user_id = request.form['delete_user']
             cur.execute("DELETE FROM users WHERE id=? AND is_admin=0", (user_id,))
+        elif 'change_password_user' in request.form:
+            user_id = request.form['change_password_user']
+            new_password = request.form['new_password']
+            cur.execute("UPDATE users SET password=? WHERE id=?", (new_password, user_id))
 
     cur.execute("SELECT id, username, is_admin FROM users")
     users = cur.fetchall()
     conn.commit()
     conn.close()
     return render_template('admin.html', users=users)
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -123,13 +119,11 @@ def index():
     init_db()
     return render_template('index.html')
 
-
 @app.route('/tak')
 def tak():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     return render_template('tak.html')
-
 
 @app.route('/rapporter')
 def rapporter():
@@ -142,7 +136,6 @@ def rapporter():
     reports = cur.fetchall()
     conn.close()
     return render_template('rapporter.html', reports=reports)
-
 
 @app.route('/rapport/<int:report_id>')
 def vis_rapport(report_id):
@@ -157,7 +150,6 @@ def vis_rapport(report_id):
     entries = cur.fetchall()
     conn.close()
     return render_template('rapport.html', report=report, entries=entries, report_id=report_id)
-
 
 @app.route('/rapport/<int:report_id>/pdf')
 def download_pdf(report_id):
@@ -193,8 +185,6 @@ def download_pdf(report_id):
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name='rapport.pdf', mimetype='application/pdf')
 
-
-# Start app med korrekt port på Render
 if __name__ == '__main__':
     init_db()
     port = int(os.environ.get("PORT", 5000))
